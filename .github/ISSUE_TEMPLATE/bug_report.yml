@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a reproducible PocketSOC defect without including private packet contents.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not attach credentials, unrestricted PCAPs, or personal network data. Prefer the synthetic demo or a minimal sanitized fixture."
+  - type: input
+    id: version
+    attributes:
+      label: PocketSOC version
+      placeholder: "0.4.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [Windows, Linux, macOS, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction
+      description: Include the smallest safe sequence and expected/actual result.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Sanitized Doctor output
+      description: Remove hostnames, addresses and paths that you do not want public.

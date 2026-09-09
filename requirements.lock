@@ -1,0 +1,7 @@
+# Reproducible runtime set validated on the maintainer workstation on 2026-09-09.
+# Regenerate deliberately after dependency and security review.
+fastapi==0.141.1
+httpx==0.28.1
+psutil==7.2.2
+pydantic==2.13.5
+uvicorn==0.52.4

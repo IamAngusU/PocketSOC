@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PocketSOC</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">LOCAL · EVIDENCE FIRST</div>
+      <h1>PocketSOC</h1>
+    </div>
+    <div class="health"><span id="health-dot" class="dot"></span><span id="health-text">Verbinde …</span></div>
+  </header>
+
+  <main>
+    <section class="hero card">
+      <div>
+        <p class="kicker">Netzwerkzustand</p>
+        <h2 id="network-state">Wird geprüft</h2>
+        <p class="muted">Beobachtung, Ableitung und Modell-Einschätzung bleiben getrennt. Keine automatischen Sperren.</p>
+      </div>
+      <div class="metrics" id="metrics"></div>
+    </section>
+
+    <nav class="tabs" aria-label="Bereiche">
+      <button class="tab active" data-panel="observe">Observe</button>
+      <button class="tab" data-panel="capture">Capture</button>
+      <button class="tab" data-panel="investigate">Investigate</button>
+      <button class="tab" data-panel="monitors">Monitors</button>
+      <button class="tab" data-panel="lab">Tool Lab</button>
+      <button class="tab" data-panel="automation">Automation</button>
+      <button class="tab" data-panel="system">System</button>
+    </nav>
+
+    <section id="observe" class="panel active">
+      <div class="grid two">
+        <article class="card">
+          <div class="section-title"><div><p class="kicker">Typed action broker</p><h3>Diagnosewerkzeuge</h3></div></div>
+          <form id="tool-form" class="form-grid">
+            <label>Werkzeug<select id="tool-name"><option value="neighbors">Lokale Geräte</option><option value="listeners">Offene lokale Ports</option><option value="connections">Aktive Verbindungen</option><option value="ping">Ping</option><option value="trace">Route</option><option value="dns">DNS</option><option value="network_scan">Privatnetz-Scan</option></select></label>
+            <label>Ziel<input id="tool-target" placeholder="z. B. 192.168.2.1 oder example.org"></label>
+            <label>Profil<select id="tool-profile"><option value="discovery">Discovery</option><option value="common_ports">Häufige Ports</option></select></label>
+            <button type="submit">Ausführen</button>
+          </form>
+          <p class="hint">Scans sind technisch auf private Netze, maximal 256 Adressen, feste Ports und feste Zeitlimits begrenzt.</p>
+        </article>
+        <article class="card">
+          <div class="section-title"><div><p class="kicker">Live queue</p><h3>Jobs</h3></div><button class="ghost" id="refresh-jobs">Aktualisieren</button></div>
+          <div id="jobs" class="list"></div>
+        </article>
+      </div>
+      <article class="card output-card"><p class="kicker">Ergebnis</p><pre id="job-output">Noch kein Job ausgewählt.</pre></article>
+    </section>
+
+    <section id="capture" class="panel">
+      <div class="grid two">
+        <article class="card">
+          <p class="kicker">dumpcap → tshark → evidence</p><h3>Kurze Live-Aufnahme</h3>
+          <form id="capture-form" class="form-grid">
+            <label>Interface<select id="capture-interface"></select></label>
+            <label>Dauer in Sekunden<input id="capture-duration" type="number" min="2" max="120" value="10"></label>
+            <label>Maximale Pakete<input id="capture-packets" type="number" min="10" max="25000" value="2500"></label>
+            <button type="submit">Aufnahme starten</button>
+          </form>
+          <p class="hint">Standardmäßig werden Pakete nach 256 Bytes abgeschnitten. Dauer und Anzahl sind hart begrenzt.</p>
+        </article>
+        <article class="card">
+          <p class="kicker">Offline import</p><h3>Vorhandene PCAP analysieren</h3>
+          <form id="pcap-form" class="stack">
+            <label>Lokaler Pfad<input id="pcap-path" placeholder="D:\captures\sample.pcapng"></label>
+            <button type="submit">Metadaten analysieren</button>
+          </form>
+          <div id="captures" class="list compact"></div>
+        </article>
+      </div>
+      <article class="card">
+        <div class="section-title"><div><p class="kicker">Checkpointed adapter · no raw payload storage</p><h3>Suricata EVE JSON anbinden</h3></div></div>
+        <form id="sensor-form" class="form-grid">
+          <label>Name<input id="sensor-name" value="Suricata Sensor"></label>
+          <label>EVE-Datei<input id="sensor-path" placeholder="D:\sensors\suricata\eve.json"></label>
+          <button type="submit">Quelle registrieren</button>
+        </form>
+        <p class="hint">Der Import liest nur vollständige JSON-Zeilen, merkt sich seinen Byte-Checkpoint, erkennt Rotation und speichert ausschließlich normalisierte Metadaten. Payload- und Packet-Felder werden verworfen.</p>
+        <div class="grid two">
+          <div><p class="kicker">Quellen</p><div id="sensor-sources" class="list compact"></div></div>
+          <div><p class="kicker">Neueste Records</p><div id="sensor-records" class="list compact"></div></div>
+        </div>
+      </article>
+    </section>
+
+    <section id="investigate" class="panel">
+      <div class="grid two">
+        <article class="card">
+          <p class="kicker">Natural language → validated evidence</p><h3>Lokalen Analysten fragen</h3>
+          <form id="query-form" class="stack">
+            <textarea id="query-text" rows="5" placeholder="Welche neuen Geräte oder Ziele wurden beobachtet?"></textarea>
+            <label class="toggle"><input id="query-llm" type="checkbox"><span>Lokales LLM nur für die Erklärung verwenden</span></label>
+            <button type="submit">Evidenz zusammenstellen</button>
+          </form>
+        </article>
+        <article class="card"><p class="kicker">Observations ≠ confirmed threats</p><h3>Beobachtungen</h3><div id="observations" class="list"></div></article>
+      </div>
+      <div class="grid two">
+        <article class="card">
+          <p class="kicker">Correlated signals · claims contract</p><h3>Angriffsmuster prüfen</h3>
+          <form id="detection-form" class="form-grid">
+            <label>Zeitfenster in Minuten<input id="detection-window" type="number" min="1" max="1440" value="60"></label>
+            <button type="submit">MITM, Replay und weitere Muster prüfen</button>
+          </form>
+          <p class="hint">Replay wird nur als Hinweis gemeldet, solange Nonce, Transaktions-ID oder Serverzustand fehlen. TCP-Retransmits und WLAN-Retries bleiben getrennte Signale.</p>
+          <div id="detection-rules" class="list compact"></div>
+        </article>
+        <article class="card"><p class="kicker">Observed · derived · hypothesis</p><h3>Incidents</h3><div id="incidents" class="list"></div></article>
+      </div>
+      <article class="card">
+        <p class="kicker">Local BM25 · packets stay structured</p><h3>Wissensindex durchsuchen</h3>
+        <form id="knowledge-form" class="form-grid">
+          <label>Frage oder Technik<input id="knowledge-query" value="ARP cache poisoning replay detection"></label>
+          <button type="submit">Lokales Wissen suchen</button>
+        </form>
+        <div id="knowledge-results" class="list compact"></div>
+      </article>
+      <article class="card"><p class="kicker">Inventory</p><h3>Geräte</h3><div id="devices" class="table-wrap"></div></article>
+    </section>
+
+    <section id="monitors" class="panel">
+      <div class="grid two">
+        <article class="card">
+          <p class="kicker">Persistent read-only tasks</p><h3>Beobachtung anlegen</h3>
+          <form id="monitor-form" class="form-grid">
+            <label>Name<input id="monitor-name" value="Lokale Geräte beobachten"></label>
+            <label>Typ<select id="monitor-kind"><option value="neighbors">Nachbartabelle</option><option value="connections">Verbindungen</option><option value="system_events">Windows-Ereignisse</option><option value="detections">Angriffsmuster korrelieren</option></select></label>
+            <label>Intervall in Sekunden<input id="monitor-interval" type="number" min="60" max="86400" value="300"></label>
+            <button type="submit">Monitor starten</button>
+          </form>
+        </article>
+        <article class="card"><p class="kicker">Scheduler</p><h3>Aktive Monitore</h3><div id="monitor-list" class="list"></div></article>
+      </div>
+    </section>
+
+    <section id="lab" class="panel">
+      <div class="grid two">
+        <article class="card">
+          <p class="kicker">Constrained self-tooling</p><h3>Sicheres Tool Lab</h3>
+          <form id="lab-form" class="stack">
+            <textarea id="lab-prompt" rows="6" placeholder="Baue einen Beobachter für sehr regelmäßige Verbindungen zu demselben Ziel."></textarea>
+            <label class="toggle"><input id="lab-llm" type="checkbox" checked><span>Lokales Modell für den Vorschlag nutzen</span></label>
+            <button type="submit">Vorschlag bauen und testen</button>
+          </form>
+          <p class="hint">Das Lab erzeugt eine validierte DSL, keinen frei ausführbaren Python-/Shell-Code. Netzwerk aus, Subprozess aus, Firewall nur als Vorschlag.</p>
+        </article>
+        <article class="card"><p class="kicker">Versioned proposals</p><h3>Generierte Analyzer</h3><div id="generated-tools" class="list"></div></article>
+      </div>
+    </section>
+
+    <section id="automation" class="panel">
+      <div class="grid two">
+        <article class="card">
+          <p class="kicker">Natural language → typed template → Wireshark validator</p><h3>Versionierten Filter bauen</h3>
+          <form id="filter-generate-form" class="stack">
+            <textarea id="filter-prompt" rows="4" placeholder="Zeige DNS-Anfragen, deren Name einen anpassbaren Begriff enthält."></textarea>
+            <label class="toggle"><input id="filter-llm" type="checkbox" checked><span>Lokales Modell für den Entwurf verwenden</span></label>
+            <button type="submit">Filter erzeugen und validieren</button>
+          </form>
+          <p class="hint">Werte werden als typisierte Parameter eingesetzt. Jede Version wird vom echten TShark-/Dumpcap-Parser geprüft.</p>
+        </article>
+        <article class="card"><p class="kicker">Active · candidate · retired</p><h3>Filterhistorie</h3><div id="filter-list" class="list"></div></article>
+      </div>
+
+      <div class="grid two">
+        <article class="card">
+          <p class="kicker">Declarative allowlist</p><h3>Recipe speichern</h3>
+          <form id="recipe-form" class="stack">
+            <label>Name<input id="recipe-name" value="Meine Netzwerkprüfung"></label>
+            <label>Beschreibung<input id="recipe-description" value="Wiederholbare lokale Evidenzprüfung"></label>
+            <label>Recipe-JSON<textarea id="recipe-spec" rows="7" placeholder='{"steps":[{"type":"evidence_summary","event_limit":25}],"stop_on_error":true}'>{"steps":[{"type":"evidence_summary","event_limit":25}],"stop_on_error":true}</textarea></label>
+            <button type="submit">Als neue Version speichern</button>
+          </form>
+        </article>
+        <article class="card"><p class="kicker">Reproducible workflows</p><h3>Recipes und Läufe</h3><div id="recipe-list" class="list"></div></article>
+      </div>
+
+      <div class="grid two">
+        <article class="card">
+          <p class="kicker">Proposal only · rollback included</p><h3>Firewall anbinden</h3>
+          <div id="firewall-bindings" class="list compact"></div>
+          <form id="firewall-proposal-form" class="form-grid">
+            <label>Firewall<select id="firewall-binding"></select></label>
+            <label>IP-Ziel<input id="firewall-target" placeholder="203.0.113.25"></label>
+            <label>Begründung<input id="firewall-reason" value="Analystenprüfung erforderlich"></label>
+            <label>TTL Sekunden<input id="firewall-ttl" type="number" min="300" max="604800" value="3600"></label>
+            <button type="submit">Block-Vorschlag erzeugen</button>
+          </form>
+          <p class="hint">PocketSOC sperrt nie allein aufgrund eines Verdachts. Anwenden erfordert die geprüfte Nutzlast, ihren Hash und einen separat autorisierten Windows-Kontext; Rollback und TTL bleiben erhalten.</p>
+        </article>
+        <article class="card"><p class="kicker">Pending review</p><h3>Firewall-Vorschläge</h3><div id="firewall-proposals" class="list"></div></article>
+      </div>
+
+      <article class="card"><p class="kicker">Curated · provenance first</p><h3>Datensätze und Module</h3><div id="catalog" class="catalog-grid"></div></article>
+    </section>
+
+    <section id="system" class="panel">
+      <article class="card"><div class="section-title"><div><p class="kicker">Capabilities</p><h3>Systemprofil</h3></div><button class="ghost" id="refresh-system">Neu prüfen</button></div><div id="system-info"></div></article>
+      <div class="grid two">
+        <article class="card">
+          <p class="kicker">Raw units · attributed energy · transparent CU</p><h3>Strom- und Compute-Kosten</h3>
+          <form id="energy-form" class="form-grid">
+            <label>Euro pro kWh<input id="energy-price" type="number" min="0" max="5" step="0.001" value="0.30"></label>
+            <label>CPU Maximum Watt<input id="energy-cpu-max" type="number" min="10" max="1000" step="1" value="241"></label>
+            <label>CPU Idle Watt<input id="energy-cpu-idle" type="number" min="0" max="500" step="1" value="12"></label>
+            <button type="submit">Messprofil speichern</button>
+          </form>
+          <div id="energy-live" class="list compact"></div>
+        </article>
+        <article class="card">
+          <p class="kicker">p50 · p95 · explicit limits</p><h3>Lokalen Benchmark messen</h3>
+          <form id="benchmark-form" class="form-grid">
+            <label>Wiederholungen<input id="benchmark-repeats" type="number" min="3" max="20" value="5"></label>
+            <button type="submit">Benchmark starten</button>
+          </form>
+          <div id="benchmarks" class="list compact"></div>
+        </article>
+      </div>
+      <article class="card"><p class="kicker">Healthy · degraded · action required</p><h3>Doctor</h3><div id="doctor-info" class="list"></div></article>
+      <article class="card"><p class="kicker">Append-only journal</p><h3>Audit</h3><div id="audit" class="list compact"></div></article>
+    </section>
+  </main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

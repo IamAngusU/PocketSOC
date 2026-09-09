@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Compile
+        run: python -m compileall -q pocketsoc tests
+      - name: Frontend syntax
+        run: node --check static/app.js
+      - name: Dependency consistency
+        run: python -m pip check
+      - name: Build wheel
+        run: python -m build --wheel
+      - name: Verify packaged UI
+        shell: python
+        run: |
+          import glob, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = set(zipfile.ZipFile(wheel).namelist())
+          required = {"pocketsoc/cli.py", "pocketsoc/main.py"}
+          assert required <= names, sorted(required - names)
+          assert any(name.endswith("share/pocketsoc/static/index.html") for name in names), "packaged UI missing"
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install bandit pip-audit
+      - run: python -m pip_audit -r requirements.lock
+      - run: python -m bandit -r pocketsoc -ll -ii

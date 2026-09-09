@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pocketsoc"
+version = "0.4.0"
+description = "Local, evidence-first network observability and investigation workbench"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Angus Velsmann"}]
+keywords = ["security", "network-monitoring", "wireshark", "suricata", "local-first", "soc"]
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "httpx>=0.27",
+  "psutil>=6.1",
+  "pydantic>=2.9",
+  "uvicorn>=0.30",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Win32 (MS Windows)",
+  "Framework :: FastAPI",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+]
+
+[project.scripts]
+pocketsoc = "pocketsoc.cli:main"
+
+[project.optional-dependencies]
+dev = ["build>=1.2", "pytest>=8"]
+
+[tool.setuptools]
+packages = ["pocketsoc"]
+
+[tool.setuptools.data-files]
+"share/pocketsoc/static" = ["static/index.html", "static/app.js", "static/style.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+runtime/
+*.log
+.env
+build/
+dist/
+*.egg-info/
+*.sqlite3*
+*.pcap
+*.pcapng
+*.cap

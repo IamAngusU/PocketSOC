@@ -7,11 +7,12 @@ PocketSOC welcomes defensive, evidence-first improvements. Open an issue before 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python -m pip install -e ".[dev]"
-.\.venv\Scripts\python -m unittest discover -s tests -v
+.\setup-quality-tools.ps1 -Python .\.venv\Scripts\python.exe
+.\check.ps1
 .\.venv\Scripts\pocketsoc --demo
 ```
 
-On Linux/macOS, replace the interpreter paths with `.venv/bin/python` and `.venv/bin/pocketsoc`. Tests that require a real TShark installation are skipped when it is unavailable; CI still runs the platform-independent safety and lifecycle suite.
+On Linux/macOS, replace the interpreter paths with `.venv/bin/python` and `.venv/bin/pocketsoc`, then run the equivalent commands documented in `check.ps1`. Tests that require a real TShark installation are skipped when it is unavailable. Hosted GitHub Actions are intentionally disabled; the checked-in workflows are opt-in templates rather than the project's authority.
 
 ## Contribution rules
 

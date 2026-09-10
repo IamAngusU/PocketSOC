@@ -12,3 +12,5 @@ dist/
 *.pcap
 *.pcapng
 *.cap
+.git.zip
+quality-reports/

@@ -1,4 +1,4 @@
-# Reproducible runtime set validated on the maintainer workstation on 2026-09-09.
+# Pinned top-level runtime set validated on the maintainer workstation on 2026-09-09.
 # Regenerate deliberately after dependency and security review.
 fastapi==0.141.1
 httpx==0.28.1

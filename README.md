@@ -48,7 +48,7 @@ It is deliberately not a free shell agent and not a replacement for Suricata, Ze
 - repeatable p50/p95 benchmark for TShark decode/filter, SQLite aggregation, BM25 retrieval and the correlation engine
 - Wireshark deep-open endpoint
 - local-only FastAPI UI and API documentation
-- portable CLI, isolated synthetic demo, buildable wheel, Windows/Linux CI, CodeQL and contributor/security templates
+- portable CLI, isolated synthetic demo, buildable wheel, comprehensive local quality gate, opt-in hosted CI definitions and contributor/security templates
 
 ## 60-second demo
 
@@ -78,9 +78,14 @@ The launcher is idempotent: it reuses a healthy PocketSOC instance, otherwise se
 ## Verify
 
 ```powershell
+& C:\Dev\Projects\PocketSOC\setup-quality-tools.ps1
 & C:\Dev\Projects\PocketSOC\check.ps1
 & C:\Dev\Projects\PocketSOC\doctor.ps1
 ```
+
+`check.ps1` is the authoritative maintainer gate and defaults to `Full`: unit tests, Python compilation, frontend syntax, installed-dependency consistency, Bandit, `pip-audit`, wheel build and packaged-UI verification. It writes both a machine-readable JSON report and a short Markdown report below the PocketSOC application-data directory. `-Profile Quick` runs the fast inner loop; `-Profile Release` additionally requires a clean Git working tree and validates whitespace. `-KeepBuildArtifacts` retains the verified wheel beside the report. Retention is bounded to the latest 50 run reports and 10 retained artifact directories by default.
+
+The quality tools live in one reusable environment at `C:\Dev\_shared\Toolchains\python-quality` on the maintainer workstation. Other machines use `%LOCALAPPDATA%\PocketSOC\quality-tools`; both paths can be overridden with `POCKETSOC_QUALITY_PYTHON`. Setup installs the reviewed versions from `quality-tools.lock` and normal checks never install or upgrade packages implicitly.
 
 ## Storage and dependencies
 
@@ -140,7 +145,7 @@ Long-term event volumes should move from SQLite summaries to Parquet/DuckDB whil
 
 ## Release posture
 
-The repository ships a reproducible wheel, exact runtime lock file, multi-platform Python matrix, frontend syntax check, CodeQL, dependency audit, Bandit gate, issue forms, pull-request template, security policy and contribution guide. The synthetic demo is deliberately the default evaluation path: it demonstrates useful behavior without asking a reviewer for administrator rights or touching their network.
+The repository ships a locally verified wheel build, pinned top-level runtime requirements, a fully resolved quality-tool lock, comprehensive local checks, frontend syntax validation, dependency audit, Bandit gate, issue forms, pull-request template, security policy and contribution guide. GitHub CI and CodeQL definitions are retained as an explicit opt-in, but repository-level GitHub Actions execution is disabled by maintainer policy. The synthetic demo is deliberately the default evaluation path: it demonstrates useful behavior without asking a reviewer for administrator rights or touching their network.
 
 Before calling a release production-ready, publish labeled-corpus detection metrics and a sustained EVE/PCAP loss test on named hardware. PocketSOC currently calls itself a workstation beta because those measurements do not exist yet.
 

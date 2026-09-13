@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import os
 import platform
@@ -14,6 +15,98 @@ from .config import PROFILE_POLICIES, Settings
 
 
 PREFERRED_OLLAMA_MODELS = ("qwen2.5:pocketsoc-845dbda0", "qwen3:8b", "qwen2.5:latest")
+
+
+def _parse_nvidia_smi_inventory(output: str) -> list[dict[str, Any]]:
+    """Parse the stable CSV query format without trusting locale-formatted WMI VRAM."""
+    devices: list[dict[str, Any]] = []
+    for row in csv.reader(output.splitlines()):
+        if len(row) != 3:
+            continue
+        name, memory_mib_text, driver = (value.strip() for value in row)
+        try:
+            memory_mib = float(memory_mib_text)
+        except ValueError:
+            continue
+        if not name or memory_mib <= 0:
+            continue
+        devices.append(
+            {
+                "Name": name,
+                "VRAMGB": round(memory_mib / 1024, 1),
+                "DriverVersion": driver,
+                "InventorySource": "nvidia-smi",
+                "MemoryAccuracy": "device-reported",
+            }
+        )
+    return devices
+
+
+def _nvidia_gpu_inventory() -> list[dict[str, Any]]:
+    executable = shutil.which("nvidia-smi")
+    if not executable and os.name == "nt":
+        candidate = (
+            Path(os.environ.get("SystemRoot", r"C:\Windows"))
+            / "System32"
+            / "nvidia-smi.exe"
+        )
+        if candidate.is_file():
+            executable = str(candidate)
+    if not executable:
+        return []
+    try:
+        completed = subprocess.run(
+            [
+                executable,
+                "--query-gpu=name,memory.total,driver_version",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+            shell=False,
+            check=False,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if completed.returncode != 0:
+        return []
+    return _parse_nvidia_smi_inventory(completed.stdout)
+
+
+def gpu_inventory() -> list[dict[str, Any]]:
+    # AdapterRAM is a legacy uint32-backed WMI field and can wrap/cap on GPUs
+    # above 4 GiB. Prefer device-reported NVIDIA values and retain other display
+    # adapters only as explicitly approximate inventory.
+    raw_wmi = _run_json(
+        "Get-CimInstance Win32_VideoController | Select-Object Name,"
+        "@{n='VRAMGB';e={[math]::Round($_.AdapterRAM/1GB,1)}},DriverVersion | ConvertTo-Json -Compress"
+    )
+    wmi_devices = (
+        raw_wmi
+        if isinstance(raw_wmi, list)
+        else ([raw_wmi] if isinstance(raw_wmi, dict) else [])
+    )
+    nvidia_devices = _nvidia_gpu_inventory()
+    result = list(nvidia_devices)
+    precise_names = {str(item.get("Name", "")).casefold() for item in nvidia_devices}
+    for item in wmi_devices:
+        name = str(item.get("Name", "")).strip()
+        if not name or name.casefold() in precise_names:
+            continue
+        result.append(
+            {
+                "Name": name,
+                "VRAMGB": item.get("VRAMGB"),
+                "DriverVersion": item.get("DriverVersion"),
+                "InventorySource": "Win32_VideoController",
+                "MemoryAccuracy": "approximate-legacy-field",
+            }
+        )
+    return result
 
 
 def _run_json(script: str) -> Any:
@@ -89,7 +182,7 @@ def capture_interfaces(settings: Settings) -> list[dict[str, Any]]:
 def system_inventory(settings: Settings) -> dict[str, Any]:
     disks = _run_json("Get-Volume | Where-Object DriveLetter | Select-Object DriveLetter,FileSystemLabel,@{n='FreeGB';e={[math]::Round($_.SizeRemaining/1GB,1)}},@{n='SizeGB';e={[math]::Round($_.Size/1GB,1)}} | ConvertTo-Json -Compress")
     adapters = _run_json("Get-NetIPConfiguration | Where-Object {$_.IPv4Address} | Select-Object InterfaceAlias,@{n='IPv4';e={$_.IPv4Address.IPAddress -join ','}},@{n='Prefix';e={$_.IPv4Address.PrefixLength -join ','}},@{n='Gateway';e={$_.IPv4DefaultGateway.NextHop -join ','}},@{n='DNS';e={$_.DNSServer.ServerAddresses -join ','}} | ConvertTo-Json -Compress")
-    gpu = _run_json("Get-CimInstance Win32_VideoController | Select-Object Name,@{n='VRAMGB';e={[math]::Round($_.AdapterRAM/1GB,1)}},DriverVersion | ConvertTo-Json -Compress")
+    gpu = gpu_inventory()
     memory = _run_json("Get-CimInstance Win32_ComputerSystem | Select-Object @{n='RAMGB';e={[math]::Round($_.TotalPhysicalMemory/1GB,1)}},NumberOfLogicalProcessors | ConvertTo-Json -Compress")
     nmap_path = settings.nmap_path or shutil.which("nmap")
     burp = Path(os.getenv("LOCALAPPDATA", "")) / "Programs" / "BurpSuite" / "BurpSuite.exe"

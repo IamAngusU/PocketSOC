@@ -1,25 +1,25 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import time
 import unittest
-import json
-from unittest.mock import patch
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from pocketsoc.analysis import _device_and_peer, _normalized_timestamp
-from pocketsoc.config import Settings
 from pocketsoc.catalog import catalog, register_artifact, sync_catalog
+from pocketsoc.config import Settings
 from pocketsoc.db import Database
 from pocketsoc.detection import DetectionService
 from pocketsoc.filters import FilterError, FilterService
 from pocketsoc.firewall import FirewallService
-from pocketsoc.monitors import MonitorScheduler
-from pocketsoc.knowledge import KnowledgeIndex
-from pocketsoc.inventory import select_ollama_model
+from pocketsoc.inventory import _parse_nvidia_smi_inventory, select_ollama_model
 from pocketsoc.jobs import JobRunner
+from pocketsoc.knowledge import KnowledgeIndex
 from pocketsoc.metering import MeterRegistry, ResourceMeter, update_energy_settings
+from pocketsoc.monitors import MonitorScheduler
 from pocketsoc.recipes import RecipeError, RecipeService
 from pocketsoc.sensors import SensorError, SensorService
 from pocketsoc.tools import ToolBroker, ToolError, _private_target
@@ -142,6 +142,15 @@ class PocketSOCTests(unittest.TestCase):
         model, identity = select_ollama_model(status)
         self.assertEqual(model, "qwen2.5:pocketsoc-845dbda0")
         self.assertEqual(identity["digest"], "digest-fixture")
+
+    def test_nvidia_inventory_uses_mib_without_uint32_vram_cap(self):
+        inventory = _parse_nvidia_smi_inventory(
+            "NVIDIA GeForce RTX 3080, 10240, 610.62\nmalformed row\n"
+        )
+        self.assertEqual(len(inventory), 1)
+        self.assertEqual(inventory[0]["VRAMGB"], 10.0)
+        self.assertEqual(inventory[0]["InventorySource"], "nvidia-smi")
+        self.assertEqual(inventory[0]["MemoryAccuracy"], "device-reported")
 
     def test_job_runner_stops_cleanly(self):
         runner = JobRunner(self.db, workers=1)

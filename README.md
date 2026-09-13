@@ -41,7 +41,7 @@ It is deliberately not a free shell agent and not a replacement for Suricata, Ze
 - versioned declarative recipes (`filter_test`, active `analyzer_run`, `evidence_summary`) with recorded runs
 - curated dataset/integration registry with provenance, license, scale and malware/privacy risk gates
 - firewall response policy plus exact-payload hash confirmation, protected local/gateway/DNS targets, maximum three reviewed actions per hour, enforced one-hour TTL expiry, audit and rollback; only the local Windows adapter has an apply driver and it requires an already elevated process
-- deterministic Doctor status and local Ollama manifests (digest, size and runtime details)
+- deterministic Doctor status, accurate NVIDIA VRAM inventory via `nvidia-smi` (legacy WMI values are labeled approximate), and local Ollama manifests (digest, size and runtime details)
 - guarded Q&A: deterministic factual answer, separately labeled model-generated open questions
 - preserved raw model output, separate localization, output guard and a stable PocketSOC model alias pinned to an audited Ollama digest
 - per-job live CPU/RAM/NVIDIA samples, estimated energy/cost at a user-set EUR/kWh price, transparent compute units and confidence/source labels
@@ -128,6 +128,7 @@ Long-term event volumes should move from SQLite summaries to Parquet/DuckDB whil
 - Packet-based replay detection cannot prove an application or cryptographic replay without nonce/transaction/server evidence.
 - Wi-Fi deauthentication and Evil-Twin visibility requires a compatible monitor-mode capture source.
 - CPU energy is estimated and GPU energy is board-level attribution, not a calibrated wall-meter measurement.
+- Non-NVIDIA display-memory values come from a legacy Windows field and are explicitly approximate; hardware sizing must not treat them as authoritative.
 - SQLite is intentionally single-workstation scale; multi-sensor ingestion needs a separate durable event store.
 - Remote web access is intentionally unavailable until authentication, authorization and TLS are designed and tested.
 - A real detection-quality release still needs pinned labeled-corpus recall/precision reports and sustained packet-loss benchmarks.
